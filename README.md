@@ -27,8 +27,7 @@ Sistema de gestión y evaluación de solicitudes de préstamos para una instituc
 
 ## Levantar con Docker
 
-```bash
-docker compose up --build
+```
 ```
 
 La aplicación queda disponible en `http://localhost:8080`.  
@@ -38,10 +37,7 @@ Swagger UI: `http://localhost:8080/swagger-ui.html`
 
 Crea un archivo `.env` en la raíz (no se versiona):
 
-```env
-DB_URL=jdbc:postgresql://db:5432/prestamos
-DB_USERNAME=prestamos
-DB_PASSWORD=changeme
+```
 ```
 
 ---
