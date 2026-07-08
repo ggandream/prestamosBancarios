@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "skills": {
+    "java-coding-standards": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "autoskills-registry",
+      "computedHash": "1c417544249186f66c1110e7812e5bee4402ae5012442847b287b4d6e6dd9c55"
+    },
+    "java-docs": {
+      "source": "github/awesome-copilot",
+      "sourceType": "autoskills-registry",
+      "computedHash": "966d266801cce0b8d9039cb77a85249e8f318148be5ae5cbac09e45175b7fe5e"
+    },
+    "java-springboot": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/java-springboot/SKILL.md",
+      "computedHash": "f1b9c6b1277178fc33e5a612761c1cd1cf6ab5f946d05d69d52026d142c0a0c1"
+    },
+    "mantine-custom-components": {
+      "source": "mantinedev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/mantine-custom-components/SKILL.md",
+      "computedHash": "16f771d471da17b76a803ace40211177283ad3adcf319e8e3b4bd1a1ddeb74c1"
+    }
+  }
+}

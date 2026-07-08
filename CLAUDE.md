@@ -4,6 +4,10 @@
 
 ---
 
+Nota: Checkar .agents/skills cuando la solicitud involucra agregar o modificar código.
+
+---
+
 ## 1. Contexto del proyecto
 
 Sistema de gestión y evaluación de solicitudes de préstamos para una institución financiera. Permite registrar clientes, capturar solicitudes, evaluarlas mediante un motor de scoring basado en reglas, generar planes de amortización y procesar de forma asíncrona las operaciones de mayor carga.
