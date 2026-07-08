@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: prestamos
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+---
+# Perfil dev — PostgreSQL local (lo afinará Andrea en la Fase 2).
+# Credenciales por variable de entorno; nunca hardcodeadas en el repo.
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/prestamos}
+    username: ${DB_USER:prestamos}
+    password: ${DB_PASSWORD:prestamos}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
