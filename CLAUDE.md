@@ -70,6 +70,7 @@ gt.edu.umg.prestamos
 
 ### 3.2 Convenciones
 
+* Aplicar SOLID; en particular, las reglas de scoring son el ejemplo vivo de Open/Closed (se agregan reglas implementando la interfaz, sin tocar el motor — aunque para este proyecto el set ya está cerrado).
 * Ramas: main (protegida) ← PR desde feature/<fase>-<descripcion> (ej. feature/f1-jerarquia-prestamo)
 * Commits: convencionales — feat:, fix:, test:, docs:, chore:
 * Dinero SIEMPRE con BigDecimal (nunca double); escala 2, RoundingMode.HALF_UP
@@ -233,9 +234,7 @@ Lista explícita de tentaciones a rechazar:
 - `MetodoAleman`: amortización constante de capital, interés sobre saldo decreciente.
 - Toda aritmética con `BigDecimal` (usar `MathContext.DECIMAL64` en potencias/divisiones intermedias, redondear cuotas a 2 decimales).
 ### 1.5 Motor de scoring (Strategy)
-- Interface `ReglaScoring`: `evaluar(Cliente c, Prestamo p): int` (0–100) y `descripcion(): String`.
-- Reglas: `ReglaEdadAntiguedad` (antigüedad laboral / antigüedad del NIT), `ReglaIngreso` (relación cuota/capacidad de pago), `ReglaHistorial` (stub simple por ahora: score neutro 70, se enriquecerá con persistencia), `ReglaCapacidadPago` (monto vs. capacidad).
-- `MotorScoring`: recibe `List<ReglaScoring>` por constructor, promedia los resultados y decide: >= 70 aprueba, 50–69 revisión, < 50 rechaza. Devolver un record `ResultadoEvaluacion(int score, String decision, List<String> detalle)`.
+- Definidio en la sección 5.
 ### 1.6 Análisis de cartera (migración de la app de consola)
 - Migrar la lógica del proyecto de consola existente al paquete `dominio.analisis`: filtrado de préstamos con saldo, agrupación por riesgo (`groupingBy`) y por tipo, `summarizingDouble`/equivalente con BigDecimal para totales, promedio, mín, máx e índice de mora, y record `Resumen`.
 - Mantenerla como lógica pura que recibe `List<Prestamo>` y devuelve estructuras de resultado (sin imprimir a consola; el formato del reporte será responsabilidad de la capa API en la Fase 4).
