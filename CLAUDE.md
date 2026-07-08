@@ -16,8 +16,8 @@ Sistema de gestión y evaluación de solicitudes de préstamos para una instituc
 | Integrante | Rol |
 |---|---|
 | Andrea Garrido | Persistencia (JPA, modelo de datos, migraciones) |
-| Luis Humberto Ruiz | Backend (servicios, scoring, API REST) |
-| Luis Renato Granados | Dev/Ops y seguridad (Docker, CI/CD, configuración) |
+| Luis Humberto Ruiz | Dev/Ops y seguridad (Docker, CI/CD, configuración) |
+| Luis Renato Granados | Backend (servicios, scoring, API REST) |
 
 ---
 
@@ -245,7 +245,7 @@ Lista explícita de tentaciones a rechazar:
 - Capacidad de pago por tipo de cliente.
 - MotorScoring con reglas simuladas (aprueba/revisión/rechaza).
 - Validaciones de constructores (datos incoherentes rechazados).
-**Criterio de aceptación:** `mvn verify` en verde; cero imports de Spring/JPA en `dominio`; cobertura razonable de la lógica de cálculo y estados. Con esto Andrea puede iniciar la Fase 2 y Luis la Fase 3 en paralelo.
+**Criterio de aceptación:** `mvn verify` en verde; cero imports de Spring/JPA en `dominio`; cobertura razonable de la lógica de cálculo y estados. Con esto Andrea puede iniciar la Fase 2 y Luis Renato la Fase 3 en paralelo.
  
 ## FASE 2 — Persistencia (Andrea)
  
@@ -257,7 +257,7 @@ Lista explícita de tentaciones a rechazar:
 6. Tests de integración de repositorios con H2 o Testcontainers: guardar y recuperar cada tipo de cliente y préstamo, verificar que el estado se reconstruye correctamente.
 **Criterio de aceptación:** ciclo completo guardar→leer→verificar para los 2 tipos de cliente, 3 tipos de préstamo y los 7 estados.
  
-## FASE 3 — Servicios y API REST (Luis Humberto, en paralelo con Fase 2)
+## FASE 3 — Servicios y API REST (Luis Renato, en paralelo con Fase 2)
  
 1. Servicios en `servicio`: `ClienteService` (registrar, consultar), `SolicitudService` (crear solicitud en Borrador, enviar a evaluación), `EvaluacionService` (usa `MotorScoring` del dominio; las reglas se registran como beans y se inyectan como `List<ReglaScoring>` — documentar que esto es Strategy + OCP), `AmortizacionService` (genera plan de pagos; la calculadora se selecciona con un `CalculadoraInteresFactory` — documentar patrón Factory).
 2. Mientras la Fase 2 no esté lista, programar contra las interfaces de repositorio con implementación en memoria (`repositorio.enmemoria`) para no bloquearse; sustituir por JPA al integrar.
@@ -278,7 +278,7 @@ Lista explícita de tentaciones a rechazar:
 6. Tests: listener procesa el evento (usar `Awaitility` o ejecutor síncrono en perfil test) y endpoint de reporte con datos semilla.
 **Criterio de aceptación:** una solicitud creada queda evaluada automáticamente sin bloquear la respuesta HTTP; el reporte de cartera refleja los datos reales de la BD.
  
-## FASE 5 — Entrega (Luis Renato)
+## FASE 5 — DevOps (Luis Humberto)
  
 1. `Dockerfile` multi-stage (build con Maven, runtime con JRE 25 slim, usuario no root).
 2. Extender `docker-compose.yml`: servicio `app` + `db`, healthchecks, variables de entorno para credenciales (nunca hardcodeadas).

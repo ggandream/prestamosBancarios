@@ -11,8 +11,8 @@ Sistema de gestión y evaluación de solicitudes de préstamos para una instituc
 | Integrante | Rol |
 |---|---|
 | Andrea Garrido | Persistencia (JPA, modelo de datos, migraciones) |
-| Luis Humberto Ruiz | Backend (servicios, scoring, API REST) |
-| Luis Renato Granados | Dev/Ops y seguridad (Docker, CI/CD, configuración) |
+| Luis Humberto Ruiz | Dev/Ops y seguridad (Docker, CI/CD, configuración) |
+| Luis Renato Granados | Backend (servicios, scoring, API REST) |
 
 ---
 
