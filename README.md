@@ -102,7 +102,7 @@ PostgreSQL **no** se abre desde el navegador (habla un protocolo binario, no HTT
 inspeccionar la BD de forma visual, el compose incluye **pgAdmin** (solo desarrollo):
 
 1. Abre **`http://localhost:8082`**.
-2. Inicia sesión con `admin@admin.com` / `admin123` (o lo que definas en las variables).
+2. Inicia sesión con `admin@admin.com` / `admin123`.
 3. En el árbol de la izquierda ya aparece el servidor **`prestamos-db`** pre-registrado
    (grupo *Servidores*). Al expandirlo por primera vez te pedirá la contraseña de la BD:
    escribe **`prestamos`** (puedes marcar «guardar contraseña»).
