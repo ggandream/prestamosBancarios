@@ -59,7 +59,7 @@ services:
   # pedirá la contraseña del usuario de la BD (por defecto: prestamos).
   # No debe exponerse en producción.
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:8.14
     container_name: prestamos-pgadmin
     depends_on:
       db:

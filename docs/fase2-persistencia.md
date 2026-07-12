@@ -230,7 +230,7 @@ Ubicados en `src/test/java/.../persistencia`:
 |---|---|---|---|
 | `db` | `postgres:16-alpine` | `5432` | PostgreSQL con volumen persistente y healthcheck (`pg_isready`). |
 | `app` | *build* (`Dockerfile`) | `8080` | Aplicación Spring Boot (perfil `dev`). Espera a que `db` esté *healthy*. |
-| `pgadmin` | `dpage/pgadmin4` | `8082` | Administrador web de la BD, con `prestamos-db` pre-registrado. |
+| `pgadmin` | `dpage/pgadmin4:8.14` | `8082` | Administrador web de la BD, con `prestamos-db` pre-registrado. |
 
 ### Comandos
 

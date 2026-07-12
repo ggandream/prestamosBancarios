@@ -37,7 +37,7 @@ public abstract class PrestamoEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cliente_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_prestamo_cliente"))
     private ClienteEntity cliente;

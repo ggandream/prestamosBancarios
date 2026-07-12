@@ -30,7 +30,7 @@ public class CuotaEntity {
     @Column(name = "id", nullable = false, updatable = false)
     private Long id;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY, optional = false)
     @JoinColumn(name = "prestamo_id", nullable = false,
             foreignKey = @jakarta.persistence.ForeignKey(name = "fk_cuota_prestamo"))
     private PrestamoEntity prestamo;
