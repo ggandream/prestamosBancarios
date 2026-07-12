@@ -1,0 +1,121 @@
+-- =====================================================================================
+-- V1 — Esquema inicial (Fase 2, Andrea)
+-- Plataforma de Gestión y Evaluación de Préstamos
+--
+-- Estrategia de herencia: JOINED (tabla base + tabla por subtipo con FK al id base).
+-- Restricciones de integridad: PK/FK, NOT NULL, UNIQUE en documento/NIT, CHECK de
+-- montos positivos y de dominios de enumerados.
+-- Tipos monetarios: NUMERIC(18,2); tasa anual: NUMERIC(10,6) (fracción, ej. 0.120000).
+-- =====================================================================================
+
+-- ------------------------------------------------------------------ Clientes (JOINED)
+
+CREATE TABLE cliente (
+    id             UUID          NOT NULL,
+    tipo_cliente   VARCHAR(31)   NOT NULL,
+    nombre         VARCHAR(200)  NOT NULL,
+    documento      VARCHAR(50)   NOT NULL,
+    email          VARCHAR(200)  NOT NULL,
+    fecha_registro DATE          NOT NULL,
+    historial      VARCHAR(20)   NOT NULL,
+    CONSTRAINT pk_cliente PRIMARY KEY (id),
+    CONSTRAINT uk_cliente_documento UNIQUE (documento),
+    CONSTRAINT ck_cliente_historial CHECK (historial IN ('BUENO', 'REGULAR', 'MALO'))
+);
+
+CREATE TABLE cliente_individual (
+    id                 UUID          NOT NULL,
+    salario_mensual    NUMERIC(18,2) NOT NULL,
+    tipo_empleo        VARCHAR(20)   NOT NULL,
+    antiguedad_laboral INTEGER       NOT NULL,
+    CONSTRAINT pk_cliente_individual PRIMARY KEY (id),
+    CONSTRAINT fk_cliente_individual FOREIGN KEY (id) REFERENCES cliente (id),
+    CONSTRAINT ck_cli_ind_salario CHECK (salario_mensual > 0),
+    CONSTRAINT ck_cli_ind_antiguedad CHECK (antiguedad_laboral >= 0),
+    CONSTRAINT ck_cli_ind_tipo_empleo CHECK (tipo_empleo IN ('FORMAL', 'INDEPENDIENTE', 'INFORMAL'))
+);
+
+CREATE TABLE cliente_empresarial (
+    id                UUID          NOT NULL,
+    facturacion_anual NUMERIC(18,2) NOT NULL,
+    nit               VARCHAR(50)   NOT NULL,
+    sector            VARCHAR(20)   NOT NULL,
+    antiguedad_nit    INTEGER       NOT NULL,
+    CONSTRAINT pk_cliente_empresarial PRIMARY KEY (id),
+    CONSTRAINT fk_cliente_empresarial FOREIGN KEY (id) REFERENCES cliente (id),
+    CONSTRAINT uk_cliente_nit UNIQUE (nit),
+    CONSTRAINT ck_cli_emp_facturacion CHECK (facturacion_anual > 0),
+    CONSTRAINT ck_cli_emp_antiguedad CHECK (antiguedad_nit >= 0),
+    CONSTRAINT ck_cli_emp_sector CHECK (sector IN ('COMERCIO', 'INDUSTRIA', 'SERVICIOS', 'AGRICOLA', 'CONSTRUCCION'))
+);
+
+-- ----------------------------------------------------------------- Préstamos (JOINED)
+
+CREATE TABLE prestamo (
+    id                 UUID          NOT NULL,
+    tipo_prestamo      VARCHAR(31)   NOT NULL,
+    cliente_id         UUID          NOT NULL,
+    monto              NUMERIC(18,2) NOT NULL,
+    plazo_meses        INTEGER       NOT NULL,
+    tasa_anual         NUMERIC(10,6) NOT NULL,
+    fecha_solicitud    DATE          NOT NULL,
+    -- estado del préstamo aplanado: discriminador + columnas de datos genéricas
+    estado_tipo        VARCHAR(20)   NOT NULL,
+    estado_fecha       TIMESTAMP,
+    estado_texto       VARCHAR(500),
+    estado_score       INTEGER,
+    estado_monto       NUMERIC(18,2),
+    estado_dias_atraso INTEGER,
+    CONSTRAINT pk_prestamo PRIMARY KEY (id),
+    CONSTRAINT fk_prestamo_cliente FOREIGN KEY (cliente_id) REFERENCES cliente (id),
+    CONSTRAINT ck_prestamo_monto CHECK (monto > 0),
+    CONSTRAINT ck_prestamo_plazo CHECK (plazo_meses BETWEEN 6 AND 360),
+    CONSTRAINT ck_prestamo_tasa CHECK (tasa_anual > 0),
+    CONSTRAINT ck_prestamo_estado CHECK (estado_tipo IN
+        ('BORRADOR', 'EN_EVALUACION', 'APROBADO', 'RECHAZADO', 'DESEMBOLSADO', 'PAGADO', 'EN_MORA'))
+);
+
+CREATE INDEX ix_prestamo_cliente ON prestamo (cliente_id);
+CREATE INDEX ix_prestamo_estado ON prestamo (estado_tipo);
+
+CREATE TABLE prestamo_personal (
+    id UUID NOT NULL,
+    CONSTRAINT pk_prestamo_personal PRIMARY KEY (id),
+    CONSTRAINT fk_prestamo_personal FOREIGN KEY (id) REFERENCES prestamo (id)
+);
+
+CREATE TABLE prestamo_hipotecario (
+    id                   UUID          NOT NULL,
+    descripcion_garantia VARCHAR(500)  NOT NULL,
+    avaluo               NUMERIC(18,2) NOT NULL,
+    CONSTRAINT pk_prestamo_hipotecario PRIMARY KEY (id),
+    CONSTRAINT fk_prestamo_hipotecario FOREIGN KEY (id) REFERENCES prestamo (id),
+    CONSTRAINT ck_prestamo_hip_avaluo CHECK (avaluo > 0)
+);
+
+CREATE TABLE prestamo_automotriz (
+    id                 UUID          NOT NULL,
+    vehiculo           VARCHAR(200)  NOT NULL,
+    depreciacion_anual NUMERIC(18,2) NOT NULL,
+    CONSTRAINT pk_prestamo_automotriz PRIMARY KEY (id),
+    CONSTRAINT fk_prestamo_automotriz FOREIGN KEY (id) REFERENCES prestamo (id),
+    CONSTRAINT ck_prestamo_auto_depreciacion CHECK (depreciacion_anual > 0)
+);
+
+-- --------------------------------------------------------------- Cuotas (plan de pagos)
+
+CREATE TABLE cuota (
+    id          BIGINT        GENERATED BY DEFAULT AS IDENTITY,
+    prestamo_id UUID          NOT NULL,
+    numero      INTEGER       NOT NULL,
+    fecha_pago  DATE          NOT NULL,
+    capital     NUMERIC(18,2) NOT NULL,
+    interes     NUMERIC(18,2) NOT NULL,
+    total       NUMERIC(18,2) NOT NULL,
+    CONSTRAINT pk_cuota PRIMARY KEY (id),
+    CONSTRAINT fk_cuota_prestamo FOREIGN KEY (prestamo_id) REFERENCES prestamo (id),
+    CONSTRAINT uk_cuota_prestamo_numero UNIQUE (prestamo_id, numero),
+    CONSTRAINT ck_cuota_numero CHECK (numero > 0)
+);
+
+CREATE INDEX ix_cuota_prestamo ON cuota (prestamo_id);

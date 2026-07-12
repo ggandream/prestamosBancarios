@@ -1,0 +1,8 @@
+target/
+.git/
+.github/
+.agents/
+diagrams/
+*.md
+.idea/
+*.iml

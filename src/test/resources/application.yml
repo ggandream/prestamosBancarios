@@ -1,11 +1,17 @@
 # Perfil de test — H2 en memoria. Permite que el contexto de Spring y los tests
 # corran sin depender de un PostgreSQL real.
+#
+# Flyway se desactiva en test: las migraciones usan tipos/DDL de PostgreSQL y aquí
+# el esquema lo genera Hibernate desde las entidades (create-drop). Esto valida el
+# mapeo JPA end-to-end sin depender del dialecto SQL de la migración.
 spring:
   datasource:
     url: jdbc:h2:mem:prestamos;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     username: sa
     password: ""
     driver-class-name: org.h2.Driver
+  flyway:
+    enabled: false
   jpa:
     hibernate:
       ddl-auto: create-drop
