@@ -101,6 +101,20 @@ public abstract class Prestamo {
         this.estado = nuevo;
     }
 
+    /**
+     * Restaura el estado persistido del agregado <strong>sin validar la transición</strong>.
+     *
+     * <p>Uso exclusivo de la capa de persistencia (Fase 2) al rehidratar un préstamo leído
+     * de la base de datos: el estado guardado ya es un estado válido alcanzado en el pasado,
+     * por lo que reproducir la máquina de estados con {@link #cambiarEstado(EstadoPrestamo)}
+     * sería incorrecto (rechazaría, p. ej., reconstruir directamente un {@code EnMora}).
+     * No debe usarse desde la lógica de negocio; para cambios de estado en runtime usar
+     * {@link #cambiarEstado(EstadoPrestamo)}.
+     */
+    public void restaurarEstado(EstadoPrestamo estado) {
+        this.estado = Objects.requireNonNull(estado, "estado no puede ser null");
+    }
+
     private static boolean transicionValida(EstadoPrestamo actual, EstadoPrestamo nuevo) {
         return switch (actual) {
             case Borrador b -> nuevo instanceof EnEvaluacion;
