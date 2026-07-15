@@ -1,177 +1,150 @@
 # Plataforma de Gestión y Evaluación de Préstamos
 
-Sistema de gestión y evaluación de solicitudes de préstamos para una institución financiera. Registra clientes, captura solicitudes, las evalúa mediante un motor de scoring basado en reglas, genera planes de amortización y procesa operaciones de forma asíncrona.
-
-> Proyecto académico — Programación Avanzada en Java. El objetivo es demostrar dominio de Java moderno, SOLID, patrones de diseño y prácticas DevOps.
-
----
+Backend académico para registrar clientes, persistir préstamos, evaluar solicitudes mediante reglas de scoring y generar planes de amortización. Usa Java 25, Spring Boot, PostgreSQL, Flyway, Maven, Docker y GitHub Actions.
 
 ## Equipo
 
-| Integrante | Rol |
+| Integrante | Responsabilidad |
 |---|---|
-| Andrea Garrido | Persistencia (JPA, modelo de datos, migraciones) |
-| Luis Humberto Ruiz | Dev/Ops y seguridad (Docker, CI/CD, configuración) |
-| Luis Renato Granados | Backend (servicios, scoring, API REST) |
-
----
+| Andrea Garrido | Persistencia JPA, modelo de datos y migraciones |
+| Luis Humberto Ruiz | DevOps, seguridad, Docker, CI/CD y configuración |
+| Luis Renato Granados | Servicios, scoring y API REST |
 
 ## Requisitos
 
-- Java 25+
-- Docker y Docker Compose
-- PostgreSQL 15+ (si se ejecuta sin Docker)
-- Maven 3.9+
+- Docker Desktop con Docker Compose v2 (recomendado).
+- Para ejecución local sin Docker: JDK 25, Maven 3.9+ y PostgreSQL 16.
 
-> El proyecto se probó con **Maven 3.9.6**. Con SDKMAN: `sdk use maven 3.9.6`.
+## Levantar todo con Docker Compose
 
----
+1. Crear el archivo local de configuración. `.env` está ignorado por Git.
 
-## Comandos
+   PowerShell:
 
-Todos se ejecutan desde la raíz del proyecto.
+   ```powershell
+   Copy-Item .env.example .env
+   ```
 
-| Comando | Qué hace |
-|---|---|
-| `mvn verify` | Compila y corre **toda** la suite de tests. Es el comando que debe pasar en verde antes de cada PR. |
-| `mvn test` | Corre solo los tests unitarios. |
-| `mvn compile` | Compila el código fuente principal. |
-| `mvn clean` | Borra el directorio `target/`. |
-| `mvn package` | Genera el JAR ejecutable en `target/prestamos-0.0.1-SNAPSHOT.jar`. |
-| `mvn clean verify` | Build limpio de punta a punta (lo que corre el CI). |
-| `mvn spring-boot:run` | Levanta la aplicación. |
+   Linux/macOS:
 
-Ejemplos útiles:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Abrir `.env` y reemplazar todos los valores `CHANGE_ME`. Nunca publicar este archivo.
+
+3. Construir e iniciar PostgreSQL, la aplicación y pgAdmin:
+
+   ```bash
+   docker compose up --build
+   ```
+
+4. Comprobar los healthchecks:
+
+   ```bash
+   docker compose ps
+   ```
+
+   Los servicios `db` y `app` deben aparecer como `healthy`.
+
+5. Abrir:
+
+   - Swagger UI: <http://localhost:8080/swagger-ui.html>
+   - OpenAPI JSON: <http://localhost:8080/v3/api-docs>
+   - Healthcheck: <http://localhost:8080/actuator/health>
+   - pgAdmin: <http://localhost:8082>
+
+Para detener los servicios:
 
 ```bash
-# Correr una sola clase de test
-mvn test -Dtest=CalculadoraInteresTest
-
-# Correr un solo método
-mvn test -Dtest=MotorScoringTest#promedioEsPonderado
+docker compose down
 ```
 
-> **Nota sobre `spring-boot:run`:** el perfil por defecto es `dev` y espera un PostgreSQL en `localhost:5432`. Puedes levantarlo con `docker compose up -d db` (ver abajo). Los **tests no necesitan base de datos**: usan el perfil `test` con H2 en memoria.
-
----
-
-## Base de datos y Docker (Fase 2)
-
-> 📄 Documentación detallada de la capa de persistencia (modelo de datos, mapeo JPA,
-> estados, migraciones y tests): **[docs/fase2-persistencia.md](docs/fase2-persistencia.md)**.
-
-El proyecto trae un `docker-compose.yml` que levanta **PostgreSQL** y, opcionalmente, la **aplicación**.
+Para borrar también los volúmenes y repetir desde cero:
 
 ```bash
-# Solo la base de datos (para desarrollar la app en local con mvn spring-boot:run)
-docker compose up -d db
-
-# Toda la plataforma (app + db) desde cero
-docker compose up --build
-
-# Detener (conserva los datos en el volumen db-data)
-docker compose down
-
-# Detener y borrar también los datos
 docker compose down -v
 ```
 
-Con la app corriendo, la API queda en `http://localhost:8080` y **Swagger UI** en
-`http://localhost:8080/swagger-ui.html`.
-
-**Credenciales** (por variables de entorno, nunca hardcodeadas). Valores por defecto para
-desarrollo; se pueden sobreescribir con un archivo `.env` en la raíz:
-
-| Variable | Default | Uso |
-|---|---|---|
-| `DB_NAME` | `prestamos` | nombre de la base de datos |
-| `DB_USER` | `prestamos` | usuario |
-| `DB_PASSWORD` | `prestamos` | contraseña |
-| `DB_PORT` | `5432` | puerto de PostgreSQL en el host |
-| `APP_PORT` | `8080` | puerto de la app en el host |
-| `PGADMIN_PORT` | `8082` | puerto de pgAdmin en el host |
-| `PGADMIN_EMAIL` | `admin@admin.com` | usuario de acceso a pgAdmin (evitar dominios reservados como `.local`) |
-| `PGADMIN_PASSWORD` | `admin123` | contraseña de acceso a pgAdmin (mínimo 6 caracteres) |
-
-> El servicio `app` se construye con un `Dockerfile` multi-stage **starter**; Luis lo
-> afinará en la Fase 5 (DevOps). El servicio `db` ya es de uso definitivo.
-
-### Explorar la base de datos desde el navegador (pgAdmin)
-
-PostgreSQL **no** se abre desde el navegador (habla un protocolo binario, no HTTP). Para
-inspeccionar la BD de forma visual, el compose incluye **pgAdmin** (solo desarrollo):
-
-1. Abre **`http://localhost:8082`**.
-2. Inicia sesión con `admin@admin.com` / `admin123`.
-3. En el árbol de la izquierda ya aparece el servidor **`prestamos-db`** pre-registrado
-   (grupo *Servidores*). Al expandirlo por primera vez te pedirá la contraseña de la BD:
-   escribe **`prestamos`** (puedes marcar «guardar contraseña»).
-4. Navega a *prestamos-db → Databases → prestamos → Schemas → public → Tables*.
-
-Alternativa sin navegador (cliente `psql` dentro del contenedor):
+Solo PostgreSQL, para desarrollar con Maven:
 
 ```bash
-docker exec -it prestamos-db psql -U prestamos -d prestamos -c "\dt"
+docker compose up -d db
 ```
 
-### Esquema de datos
+## Persistencia y Flyway
 
-El esquema lo administra **Flyway** (`src/main/resources/db/migration/V1__esquema_inicial.sql`):
-se aplica automáticamente al arrancar el perfil `dev`. Hibernate se limita a **validar**
-(`ddl-auto: validate`) que las entidades JPA coincidan con el esquema migrado; nunca crea
-ni altera tablas.
+Flyway ejecuta `src/main/resources/db/migration/V1__esquema_inicial.sql`. Hibernate usa `ddl-auto: validate`; no crea ni altera tablas.
 
-- **Herencia:** estrategia `JOINED` (tabla base + tabla por subtipo con FK) tanto para
-  clientes como para préstamos — permite `NOT NULL` reales en los campos de cada subtipo.
-- **Estado del préstamo:** columna discriminadora `estado_tipo` + columnas de datos; el
-  `EstadoMapper` reconstruye el record exacto del sealed interface `EstadoPrestamo`.
-- **Entidades JPA separadas del dominio:** viven en `persistencia.entidad` y se traducen con
-  mapeadores manuales en `persistencia.mapper`; las entidades nunca salen de la capa de
-  persistencia (los adaptadores en `persistencia.adaptador` exponen objetos de dominio).
+- Herencia JPA `JOINED` para clientes y préstamos.
+- Estado persistido mediante `estado_tipo` y columnas de datos.
+- Entidades separadas del dominio en `persistencia.entidad`.
+- Mapeadores manuales en `persistencia.mapper`.
+- Más detalles: [docs/fase2-persistencia.md](docs/fase2-persistencia.md).
 
----
+## Ejecutar los tests
 
-## Motor de scoring
-
-Evaluación 100% determinista basada en 4 reglas ponderadas:
-
-| Regla | Peso |
-|---|---|
-| Capacidad de pago | 40% |
-| Ingreso | 25% |
-| Historial crediticio | 25% |
-| Edad | 10% |
-
-**Decisión:** score ≥ 60 → Aprobado · score < 60 → Rechazado.
-
----
-
-## Flujo de estados
-
-```
-Borrador → EnEvaluacion → Aprobado → Desembolsado → Pagado
-                        ↘ Rechazado
-         (Desembolsado puede pasar a EnMora)
+```bash
+mvn -B -ntp clean verify
 ```
 
----
+El reporte de cobertura queda en `target/site/jacoco/index.html`.
 
-## Stack tecnológico
+Ejecutar una clase específica:
 
-- **Java 25** · Spring Boot 3.x · Spring Data JPA
-- **PostgreSQL** (producción) · H2 (tests)
-- Eventos asíncronos nativos de Spring (`@Async`, `@EventListener`)
-- springdoc-openapi · Jakarta Bean Validation
-- JUnit 5 · Mockito · Testcontainers · JaCoCo
-- Docker (multi-stage) · GitHub Actions
+```bash
+mvn test -Dtest=CalculadoraInteresTest
+```
 
----
+## Ejecución local sin Docker para la aplicación
+
+La aplicación no contiene credenciales predeterminadas. Configure el entorno antes de iniciarla:
+
+```powershell
+$env:DB_URL="jdbc:postgresql://localhost:5432/prestamos"
+$env:DB_USER="usuario_local"
+$env:DB_PASSWORD="clave_local"
+mvn spring-boot:run
+```
+
+## Seguridad opcional con API key
+
+Para exigir una API key en `/api/**`, configure en `.env`:
+
+```dotenv
+APP_SECURITY_ENABLED=true
+APP_API_KEY=una-clave-larga-aleatoria
+```
+
+Envíe la clave mediante el encabezado `X-API-Key`:
+
+```bash
+curl -H "X-API-Key: una-clave-larga-aleatoria" http://localhost:8080/api/prestamos
+```
+
+Swagger, OpenAPI y `/actuator/health` permanecen públicos. No coloque claves en código, capturas ni commits.
 
 ## CI/CD
 
-GitHub Actions ejecuta en cada push:
-1. Compilación
-2. Tests (unitarios + integración)
-3. Generación y publicación del reporte de cobertura JaCoCo
+`.github/workflows/ci.yml` contiene dos jobs:
 
-El build falla si algún test no pasa.
+1. `build-test`: configura Temurin 25, ejecuta `mvn clean verify` y publica JaCoCo y los resultados de tests.
+2. `docker-image`: depende del primer job, construye la imagen y solo la publica cuando existen estos secrets:
+
+   - `DOCKERHUB_USERNAME`
+   - `DOCKERHUB_TOKEN`
+   - `DOCKERHUB_IMAGE` (sin etiqueta, por ejemplo `usuario/prestamos-app`)
+
+Sin esos secrets la imagen se construye para validación, pero no se publica.
+
+## Arquitectura y patrones
+
+La justificación de SOLID, Strategy, Factory y Observer está en [docs/arquitectura.md](docs/arquitectura.md).
+
+## Diagnóstico rápido
+
+- `docker` no se reconoce: instalar/iniciar Docker Desktop y abrir una terminal nueva.
+- Maven usa otra versión: comprobar `mvn -version` y configurar `JAVA_HOME` hacia JDK 25.
+- Falta una variable: crear `.env` desde `.env.example` y reemplazar todos los `CHANGE_ME`.
+- La app espera a PostgreSQL: revisar `docker compose logs db`.
+- Flyway falla: ejecutar `docker compose down -v` únicamente si se pueden borrar los datos locales y volver a levantar.

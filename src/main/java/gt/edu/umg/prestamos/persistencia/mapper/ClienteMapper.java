@@ -6,6 +6,7 @@ import gt.edu.umg.prestamos.dominio.cliente.ClienteIndividual;
 import gt.edu.umg.prestamos.persistencia.entidad.ClienteEmpresarialEntity;
 import gt.edu.umg.prestamos.persistencia.entidad.ClienteEntity;
 import gt.edu.umg.prestamos.persistencia.entidad.ClienteIndividualEntity;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,7 +35,9 @@ public class ClienteMapper {
     }
 
     public Cliente aDominio(ClienteEntity entity) {
-        return switch (entity) {
+        ClienteEntity entityInicializada = Hibernate.unproxy(entity, ClienteEntity.class);
+
+        return switch (entityInicializada) {
             case ClienteIndividualEntity ci -> new ClienteIndividual(
                     ci.getId(), ci.getNombre(), ci.getDocumento(), ci.getEmail(),
                     ci.getFechaRegistro(), ci.getHistorial(),
@@ -44,7 +47,8 @@ public class ClienteMapper {
                     ce.getFechaRegistro(), ce.getHistorial(),
                     ce.getFacturacionAnual(), ce.getNit(), ce.getSector(), ce.getAntiguedadNit());
             default -> throw new IllegalArgumentException(
-                    "Subtipo de ClienteEntity no soportado: " + entity.getClass().getName());
+                    "Subtipo de ClienteEntity no soportado: "
+                            + entityInicializada.getClass().getName());
         };
     }
 }
