@@ -1,78 +1,64 @@
-# =====================================================================================
-# docker-compose — entorno de desarrollo (Fase 2, Andrea)
-#
-# Levanta:
-#   - db:  PostgreSQL con volumen persistente y healthcheck
-#   - app: la aplicación Spring Boot (construida con el Dockerfile multi-stage)
-#
-# Uso:
-#   docker compose up --build        # levanta db + app desde cero
-#   docker compose up -d db          # solo la base de datos (para desarrollar la app local)
-#   docker compose down              # detiene y elimina contenedores (conserva el volumen)
-#   docker compose down -v           # además borra los datos de la BD
-#
-# Credenciales por variables de entorno (nunca hardcodeadas). Se pueden sobreescribir
-# con un archivo .env; los valores por defecto sirven para desarrollo local.
-#
-# NOTA (coordinación): el servicio `app` usa un Dockerfile "starter" que Luis endurecerá
-# en la Fase 5 (multi-stage optimizado, usuario no root afinado, healthcheck de la app).
-# =====================================================================================
-
 services:
   db:
     image: postgres:16-alpine
     container_name: prestamos-db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-prestamos}
-      POSTGRES_USER: ${DB_USER:-prestamos}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-prestamos}
+      POSTGRES_DB: ${DB_NAME:?Defina DB_NAME en el archivo .env}
+      POSTGRES_USER: ${DB_USER:?Defina DB_USER en el archivo .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en el archivo .env}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-prestamos} -d ${DB_NAME:-prestamos}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      retries: 10
+      start_period: 10s
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    image: prestamos-app:local
     container_name: prestamos-app
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-prestamos}
-      DB_USER: ${DB_USER:-prestamos}
-      DB_PASSWORD: ${DB_PASSWORD:-prestamos}
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:?Defina DB_NAME en el archivo .env}
+      DB_USER: ${DB_USER:?Defina DB_USER en el archivo .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en el archivo .env}
+      APP_SECURITY_ENABLED: ${APP_SECURITY_ENABLED:-false}
+      APP_API_KEY: ${APP_API_KEY:-}
     ports:
       - "${APP_PORT:-8080}:8080"
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
 
-  # Administrador web de PostgreSQL (SOLO desarrollo). UI en http://localhost:8082.
-  # La conexión a la BD viene pre-registrada vía servers.json; en el primer connect
-  # pedirá la contraseña del usuario de la BD (por defecto: prestamos).
-  # No debe exponerse en producción.
   pgadmin:
     image: dpage/pgadmin4:8.14
     container_name: prestamos-pgadmin
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?Defina PGADMIN_EMAIL en el archivo .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Defina PGADMIN_PASSWORD en el archivo .env}
     ports:
       - "${PGADMIN_PORT:-8082}:80"
     volumes:
       - pgadmin-data:/var/lib/pgadmin
       - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
-    restart: unless-stopped
 
 volumes:
   db-data:

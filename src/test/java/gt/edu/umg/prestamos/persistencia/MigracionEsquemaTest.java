@@ -19,6 +19,7 @@ import org.springframework.test.context.TestPropertySource;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:migracion-flyway;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
         "spring.flyway.enabled=true",
         "spring.flyway.locations=classpath:db/migration",
         "spring.jpa.hibernate.ddl-auto=validate"

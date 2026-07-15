@@ -5,6 +5,8 @@
 # el esquema lo genera Hibernate desde las entidades (create-drop). Esto valida el
 # mapeo JPA end-to-end sin depender del dialecto SQL de la migración.
 spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
     url: jdbc:h2:mem:prestamos;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     username: sa

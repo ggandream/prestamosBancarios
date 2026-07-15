@@ -1,24 +1,31 @@
-# =====================================================================================
-# Dockerfile STARTER (Fase 2 — Andrea). Base funcional para que `docker compose up`
-# levante la app end-to-end. Luis lo endurecerá/optimizará en la Fase 5 (capas de
-# dependencias cacheadas, JRE slim final, afinado de usuario no root, etc.).
-# =====================================================================================
+# syntax=docker/dockerfile:1.7
 
-# ---- build ---------------------------------------------------------------------------
-FROM maven:3.9-eclipse-temurin-25 AS build
-WORKDIR /app
-# Se copia primero el pom para aprovechar la cache de dependencias entre builds.
-COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
+FROM maven:3.9.16-eclipse-temurin-25-alpine AS build
+WORKDIR /workspace
+
+COPY pom.xml ./
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp dependency:go-offline
+
 COPY src ./src
-RUN mvn -B -q clean package -DskipTests && rm -f target/*.jar.original
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp clean verify
 
-# ---- runtime -------------------------------------------------------------------------
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:25-jre-alpine AS runtime
+
+RUN apk add --no-cache curl \
+    && addgroup -S prestamos \
+    && adduser -S -G prestamos -h /app prestamos
+
 WORKDIR /app
-# Usuario no root por seguridad básica.
-RUN useradd --system --uid 1001 spring
-COPY --from=build /app/target/prestamos-*.jar app.jar
-USER spring
+COPY --from=build --chown=prestamos:prestamos /workspace/target/prestamos-*.jar app.jar
+
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/urandom"
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+USER prestamos:prestamos
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
+  CMD curl --fail --silent http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
