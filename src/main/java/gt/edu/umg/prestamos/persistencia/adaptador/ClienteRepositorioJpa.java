@@ -7,6 +7,7 @@ import gt.edu.umg.prestamos.persistencia.repositorio.ClienteJpaRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,5 +48,10 @@ public class ClienteRepositorioJpa {
     @Transactional(readOnly = true)
     public boolean existePorDocumento(String documento) {
         return repositorio.existsByDocumento(documento);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Cliente> buscarTodos() {
+        return repositorio.findAll().stream().map(mapper::aDominio).toList();
     }
 }
