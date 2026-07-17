@@ -5,6 +5,7 @@ import gt.edu.umg.prestamos.dominio.cliente.Cliente;
 import gt.edu.umg.prestamos.dominio.cliente.ClienteIndividual;
 import gt.edu.umg.prestamos.dominio.cliente.HistorialCrediticio;
 import gt.edu.umg.prestamos.dominio.cliente.TipoEmpleo;
+import gt.edu.umg.prestamos.dominio.estado.EstadoPrestamo;
 import gt.edu.umg.prestamos.dominio.prestamo.Prestamo;
 import gt.edu.umg.prestamos.dominio.prestamo.PrestamoPersonal;
 import gt.edu.umg.prestamos.servicio.AmortizacionService;
@@ -19,11 +20,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -61,6 +64,20 @@ class PrestamoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].tipo").value("PERSONAL"))
                 .andExpect(jsonPath("$[0].monto").value(50000.00));
+    }
+
+    @Test
+    void postDesembolsarDevuelvePrestamoDesembolsado() throws Exception {
+        Prestamo prestamo = prestamo();
+        prestamo.cambiarEstado(new EstadoPrestamo.EnEvaluacion(LocalDateTime.now(), "motor-scoring"));
+        prestamo.cambiarEstado(new EstadoPrestamo.Aprobado(LocalDateTime.now(), 88));
+        prestamo.cambiarEstado(new EstadoPrestamo.Desembolsado(LocalDateTime.now(),
+                new BigDecimal("50000.00")));
+        when(solicitudes.desembolsar(prestamo.getId())).thenReturn(prestamo);
+
+        mvc.perform(post("/api/prestamos/{id}/desembolsar", prestamo.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("Desembolsado"));
     }
 
     @Test

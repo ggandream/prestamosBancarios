@@ -6,6 +6,7 @@ import gt.edu.umg.prestamos.dominio.scoring.ReglaEdad;
 import gt.edu.umg.prestamos.dominio.scoring.ReglaHistorial;
 import gt.edu.umg.prestamos.dominio.scoring.ReglaIngreso;
 import gt.edu.umg.prestamos.dominio.scoring.ReglaScoring;
+import gt.edu.umg.prestamos.persistencia.adaptador.PrestamoRepositorioJpa;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,9 +33,14 @@ public class ScoringConfig {
         return new ReglaIngreso();
     }
 
+    /**
+     * Regla de historial enriquecida (Fase 4): recibe la consulta de préstamos previos
+     * ya resuelta contra el repositorio. El dominio solo ve la interfaz funcional
+     * {@code ConsultaPrestamosPrevios}; la persistencia nunca entra al dominio.
+     */
     @Bean
-    public ReglaScoring reglaHistorial() {
-        return new ReglaHistorial();
+    public ReglaScoring reglaHistorial(PrestamoRepositorioJpa prestamos) {
+        return new ReglaHistorial(prestamos::buscarPorCliente);
     }
 
     @Bean

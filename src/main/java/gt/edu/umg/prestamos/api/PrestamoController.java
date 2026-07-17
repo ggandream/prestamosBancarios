@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,5 +50,11 @@ public class PrestamoController {
     public PlanPagosDTO planPagos(@PathVariable UUID id,
                                   @RequestParam(required = false) String metodo) {
         return PlanPagosDTO.desde(amortizacion.generarPlan(id, metodo));
+    }
+
+    @PostMapping("/{id}/desembolsar")
+    @Operation(summary = "Desembolsa un préstamo aprobado (publica EventoPrestamoDesembolsado)")
+    public RespuestaPrestamoDTO desembolsar(@PathVariable UUID id) {
+        return RespuestaPrestamoDTO.desde(solicitudes.desembolsar(id));
     }
 }

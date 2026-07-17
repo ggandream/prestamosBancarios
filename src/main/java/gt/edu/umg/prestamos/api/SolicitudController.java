@@ -35,15 +35,20 @@ public class SolicitudController {
         this.evaluacion = evaluacion;
     }
 
+    /**
+     * Responde 202 Accepted: la solicitud queda en Borrador y la evaluación ocurre en
+     * segundo plano vía {@code ListenerEvaluacion} (Fase 4). El cliente consulta el
+     * resultado con {@code GET /api/prestamos/{id}}.
+     */
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Crea una solicitud de préstamo en estado Borrador")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(summary = "Crea una solicitud en Borrador; la evaluación corre en segundo plano (202)")
     public RespuestaPrestamoDTO crear(@Valid @RequestBody SolicitudPrestamoDTO solicitud) {
         return RespuestaPrestamoDTO.desde(solicitudes.crear(solicitud.aComando()));
     }
 
     @PostMapping("/{id}/evaluar")
-    @Operation(summary = "Evalúa una solicitud con el motor de scoring (Aprobado/Rechazado)")
+    @Operation(summary = "Evalúa manualmente una solicitud aún en Borrador (Aprobado/Rechazado)")
     public ResultadoEvaluacionDTO evaluar(@PathVariable UUID id) {
         return ResultadoEvaluacionDTO.desde(evaluacion.evaluar(id));
     }

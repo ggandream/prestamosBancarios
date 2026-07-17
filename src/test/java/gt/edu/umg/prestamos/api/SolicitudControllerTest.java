@@ -60,7 +60,8 @@ class SolicitudControllerTest {
     }
 
     @Test
-    void postSolicitudValidaDevuelve201EnBorrador() throws Exception {
+    void postSolicitudValidaDevuelve202EnBorrador() throws Exception {
+        // 202 Accepted: la evaluación corre en segundo plano (Fase 4).
         Cliente cliente = cliente();
         when(solicitudes.crear(any())).thenReturn(prestamo(cliente));
 
@@ -75,7 +76,8 @@ class SolicitudControllerTest {
                                   "tasaAnual": 0.12
                                 }
                                 """.formatted(cliente.getId())))
-                .andExpect(status().isCreated())
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.id").isNotEmpty())
                 .andExpect(jsonPath("$.tipo").value("PERSONAL"))
                 .andExpect(jsonPath("$.estado").value("Borrador"));
     }
