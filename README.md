@@ -1,6 +1,6 @@
 # Plataforma de Gestión y Evaluación de Préstamos
 
-Backend académico para registrar clientes, persistir préstamos, evaluar solicitudes mediante reglas de scoring y generar planes de amortización. Usa Java 25, Spring Boot, PostgreSQL, Flyway, Maven, Docker y GitHub Actions.
+Backend académico para registrar clientes, persistir préstamos, evaluar solicitudes de forma asíncrona mediante reglas de scoring, generar planes de amortización y reportar la cartera. Usa Java 25, Spring Boot, PostgreSQL, Flyway, Maven, Docker y GitHub Actions.
 
 ## Equipo
 
@@ -72,6 +72,23 @@ Solo PostgreSQL, para desarrollar con Maven:
 docker compose up -d db
 ```
 
+## Flujo principal de la API
+
+En el perfil `dev` la aplicación siembra datos de demostración al arrancar (`CargadorDatosSemilla`, idempotente): cuatro clientes con préstamos en distintos estados, de modo que Swagger y el reporte de cartera tienen datos desde el primer arranque.
+
+| Método y ruta | Descripción |
+|---|---|
+| `POST /api/clientes` | Registra un cliente `INDIVIDUAL` o `EMPRESARIAL` (201) |
+| `GET /api/clientes` · `GET /api/clientes/{id}` | Consulta de clientes |
+| `POST /api/solicitudes` | Crea la solicitud en `Borrador` y responde **202**; la evaluación corre en segundo plano |
+| `POST /api/solicitudes/{id}/evaluar` | Evaluación manual de una solicitud aún en `Borrador` |
+| `GET /api/prestamos` · `GET /api/prestamos/{id}` | Consulta de préstamos y de su estado (`Aprobado`/`Rechazado` tras la evaluación) |
+| `GET /api/prestamos/{id}/plan-pagos?metodo=FRANCES\|ALEMAN` | Plan de amortización; sin `metodo` usa el del producto |
+| `POST /api/prestamos/{id}/desembolsar` | Desembolsa un préstamo aprobado y publica el evento de desembolso |
+| `GET /api/reportes/cartera` | Resumen de cartera: totales, índice de mora, agrupaciones y conclusiones |
+
+La evaluación asíncrona usa eventos nativos de Spring (`ApplicationEventPublisher` + `@Async @EventListener`): al crear una solicitud se publica `EventoSolicitudCreada`, `ListenerEvaluacion` ejecuta el motor de scoring en background y el estado transiciona `Borrador → EnEvaluacion → Aprobado/Rechazado`. El resultado se consulta con `GET /api/prestamos/{id}`.
+
 ## Persistencia y Flyway
 
 Flyway ejecuta `src/main/resources/db/migration/V1__esquema_inicial.sql`. Hibernate usa `ddl-auto: validate`; no crea ni altera tablas.
@@ -126,10 +143,11 @@ Swagger, OpenAPI y `/actuator/health` permanecen públicos. No coloque claves en
 
 ## CI/CD
 
-`.github/workflows/ci.yml` contiene dos jobs:
+`.github/workflows/ci.yml` contiene tres jobs:
 
 1. `build-test`: configura Temurin 25, ejecuta `mvn clean verify` y publica JaCoCo y los resultados de tests.
-2. `docker-image`: depende del primer job, construye la imagen y solo la publica cuando existen estos secrets:
+2. `compose-smoke`: levanta `db` + `app` con Docker Compose desde cero, espera el healthcheck y verifica que la API responda con los datos semilla (`GET /api/reportes/cartera`).
+3. `docker-image`: depende de los anteriores, construye la imagen y solo la publica cuando existen estos secrets:
 
    - `DOCKERHUB_USERNAME`
    - `DOCKERHUB_TOKEN`

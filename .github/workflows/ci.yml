@@ -82,6 +82,26 @@ jobs:
           docker compose ps
           exit 1
 
+      - name: Verificar API y datos semilla (fases 3-4)
+        shell: bash
+        run: |
+          # El perfil dev siembra la cartera de demostracion; el seed espera la
+          # evaluacion asincrona de cada solicitud, por eso se sondea con reintentos.
+          for intento in {1..12}; do
+            total=$(curl --fail --silent http://localhost:8080/api/reportes/cartera \
+              | grep -o '"totalPrestamos":[0-9]*' | cut -d: -f2 || echo 0)
+            if [[ "${total:-0}" -ge 4 ]]; then
+              echo "Cartera sembrada con $total prestamos"
+              curl --fail --silent http://localhost:8080/api/reportes/cartera
+              echo
+              exit 0
+            fi
+            echo "Esperando datos semilla ($intento/12)..."
+            sleep 5
+          done
+          echo "La API no expuso los datos semilla a tiempo"
+          exit 1
+
       - name: Mostrar logs si ocurre un error
         if: failure()
         run: docker compose logs --no-color app db

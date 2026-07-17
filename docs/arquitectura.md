@@ -4,7 +4,7 @@
 
 La solución es un **monolito modular**. El dominio se mantiene como Java puro en `gt.edu.umg.prestamos.dominio`; las capas externas de API, servicios, persistencia y configuración pueden depender del dominio, pero el dominio no importa Spring ni JPA. Esta dirección de dependencias facilita probar las reglas financieras sin infraestructura.
 
-La rama base actual contiene las Fases 0–2: dominio, Strategy y persistencia JPA con Flyway. Las referencias de Factory y Observer definidas por el diseño se materializan al integrar las ramas de Fases 3–4. La lista de comprobación de la sección 5 evita afirmar que esas clases ya están presentes antes de la integración final.
+La rama integrada contiene las Fases 0–4: dominio puro, persistencia JPA con Flyway, servicios de aplicación con API REST y el procesamiento asíncrono por eventos. Todas las clases de Factory y Observer referidas en este documento existen en el código; la sección 5 registra la verificación realizada sobre la rama integrada.
 
 ## 2. Principios SOLID
 
@@ -18,6 +18,8 @@ Cada clase tiene un motivo principal de cambio:
 - `AnalizadorCartera` agrega y resume préstamos sin presentar resultados por consola ni API.
 - `ClienteMapper`, `PrestamoMapper`, `EstadoMapper` y `CuotaMapper` traducen entre dominio y persistencia sin asumir responsabilidades de repositorio.
 - `ClienteJpaRepository` y `PrestamoJpaRepository` se limitan al acceso de datos; `ClienteRepositorioJpa` y `PrestamoRepositorioJpa` adaptan esos repositorios al dominio.
+- `ClienteService`, `SolicitudService`, `EvaluacionService`, `AmortizacionService` y `ReporteService` orquestan un caso de uso cada uno; los controladores (`ClienteController`, `SolicitudController`, `PrestamoController`, `ReporteController`) solo traducen HTTP ↔ DTO y `ManejadorGlobalErrores` centraliza la traducción de excepciones a códigos HTTP.
+- `ListenerEvaluacion` y `ListenerDesembolso` reaccionan a un evento cada uno; `CargadorDatosSemilla` solo siembra datos de demostración en el perfil `dev`.
 - `ApiKeyAuthenticationFilter` valida el encabezado `X-API-Key`; `SecurityConfig` decide qué rutas se protegen.
 
 Esta separación reduce cambios cruzados: modificar el algoritmo alemán no obliga a tocar scoring o seguridad.
@@ -47,7 +49,8 @@ Los componentes de alto nivel dependen de abstracciones:
 - `MotorScoring` depende de `List<ReglaScoring>`, no de las cuatro reglas concretas.
 - `Prestamo` depende de `CalculadoraInteres`, no de un algoritmo fijo.
 - `ClienteRepositorioJpa` y `PrestamoRepositorioJpa` dependen de contratos de repositorio y mapeadores; las entidades `ClienteEntity`, `PrestamoEntity` y `CuotaEntity` permanecen fuera del dominio.
-- En la integración de Fase 3, `EvaluacionService` debe recibir las reglas y `AmortizacionService` debe usar `CalculadoraInteresFactory`, evitando construir dependencias dentro de los servicios.
+- `EvaluacionService` recibe el `MotorScoring` ya armado con las reglas registradas como beans en `ScoringConfig` (inyectadas como `List<ReglaScoring>`), y `AmortizacionService` selecciona la estrategia mediante `CalculadoraInteresFactory`; ningún servicio construye sus dependencias internamente.
+- `ReglaHistorial` depende de la interfaz funcional `ReglaHistorial.ConsultaPrestamosPrevios`, definida en el propio dominio; `ScoringConfig` la implementa con el repositorio de préstamos. Así la regla usa datos de persistencia sin que el dominio conozca la infraestructura (Fase 4).
 
 El paquete de dominio no importa `org.springframework.*` ni `jakarta.persistence.*`, lo que confirma que las dependencias apuntan hacia adentro.
 
@@ -65,7 +68,7 @@ El motor recorre una colección de estrategias, ejecuta `evaluar(cliente, presta
 
 ### 3.2 Strategy en calculadoras de interés
 
-**Contexto:** `Prestamo.generarPlanPagos(CalculadoraInteres)` y, tras integrar Fase 3, `AmortizacionService`.
+**Contexto:** `Prestamo.generarPlanPagos(CalculadoraInteres)` y `AmortizacionService`.
 
 **Estrategia:** `CalculadoraInteres`.
 
@@ -75,23 +78,23 @@ Ambos algoritmos comparten el mismo contrato y producen cuotas con `BigDecimal`.
 
 ### 3.3 Factory en calculadoras
 
-**Factory prevista por Fase 3:** `CalculadoraInteresFactory`.
+**Factory:** `CalculadoraInteresFactory` (paquete `servicio`).
 
 **Productos:** implementaciones de `CalculadoraInteres`: `MetodoFrances` y `MetodoAleman`.
 
-**Cliente:** `AmortizacionService`.
+**Cliente:** `AmortizacionService`, a través de `GET /api/prestamos/{id}/plan-pagos?metodo=...`.
 
-La Factory centraliza la traducción de una opción de entrada (por ejemplo, `FRANCES` o `ALEMAN`) a la estrategia correspondiente. Así, el controlador y el servicio no usan `new MetodoFrances()` ni contienen condicionales de construcción. La Factory devuelve la abstracción `CalculadoraInteres`, reforzando DIP y OCP.
+La Factory centraliza la traducción de la opción de entrada (`FRANCES` o `ALEMAN`) a la estrategia correspondiente. Así, el controlador y el servicio no usan `new MetodoFrances()` ni contienen condicionales de construcción. Cuando no se pide un método explícito, `AmortizacionService` usa `Prestamo.calculadoraPorDefecto()`, la estrategia propia de cada producto. La Factory devuelve la abstracción `CalculadoraInteres`, reforzando DIP y OCP.
 
 ### 3.4 Observer mediante eventos de Spring
 
-**Publicador previsto por Fases 3–4:** `SolicitudService` mediante `ApplicationEventPublisher`.
+**Publicadores:** `SolicitudService` mediante `ApplicationEventPublisher` (publica `EventoSolicitudCreada` al crear la solicitud y `EventoPrestamoDesembolsado` al desembolsar) y `ListenerEvaluacion` (publica `EventoEvaluacionCompletada` al terminar el scoring).
 
-**Eventos:** `EventoSolicitudCreada`, `EventoEvaluacionCompletada` y `EventoPrestamoDesembolsado`.
+**Eventos:** `EventoSolicitudCreada`, `EventoEvaluacionCompletada` y `EventoPrestamoDesembolsado` (records en `servicio.evento`).
 
-**Observadores:** `ListenerEvaluacion` y `ListenerDesembolso`, registrados con `@EventListener` y ejecutados con `@Async`.
+**Observadores:** `ListenerEvaluacion` y `ListenerDesembolso`, registrados con `@EventListener` y ejecutados con `@Async` sobre el `TaskExecutor` de `AsyncConfig`.
 
-El emisor publica hechos de negocio sin invocar directamente a cada receptor. Los listeners reaccionan de forma desacoplada: `ListenerEvaluacion` inicia el scoring y `ListenerDesembolso` procesa las acciones posteriores al desembolso. Spring actúa como canal de notificación del patrón Observer sin introducir Kafka o RabbitMQ.
+El emisor publica hechos de negocio sin invocar directamente a cada receptor. Los listeners reaccionan de forma desacoplada: `ListenerEvaluacion` ejecuta el scoring en segundo plano (por eso `POST /api/solicitudes` responde 202 sin bloquear al cliente, y el estado transiciona Borrador → EnEvaluacion → Aprobado/Rechazado) y `ListenerDesembolso` simula la notificación posterior al desembolso. Spring actúa como canal de notificación del patrón Observer sin introducir Kafka o RabbitMQ.
 
 ## 4. Decisiones DevOps y seguridad
 
@@ -103,15 +106,15 @@ El emisor publica hechos de negocio sin invocar directamente a cada receptor. Lo
 - CI separa `build-test` de `docker-image`; una imagen con tests fallidos nunca llega al job de Docker.
 - El push al registry es opcional y depende de secrets de GitHub, por lo que el workflow también funciona en forks sin credenciales.
 
-## 5. Verificación antes de fusionar todas las fases
+## 5. Verificación de la integración (realizada)
 
-En la rama integrada final se debe confirmar con `rg` o búsqueda del IDE que existan estas clases:
+Con las Fases 3–4 integradas se confirmó que existen, con estos nombres, todas las clases referidas en este documento:
 
 - `CalculadoraInteresFactory` y `AmortizacionService` (Fase 3).
 - `SolicitudService` con `ApplicationEventPublisher` (Fases 3–4).
 - `EventoSolicitudCreada`, `EventoEvaluacionCompletada`, `EventoPrestamoDesembolsado`, `ListenerEvaluacion` y `ListenerDesembolso` (Fase 4).
 
-Si los nombres cambian durante la integración, se deben actualizar las referencias de las secciones 2.5, 3.3 y 3.4. Después se ejecutan:
+La verificación se reproduce con:
 
 ```bash
 mvn -B -ntp clean verify
@@ -119,4 +122,4 @@ docker compose up --build
 docker compose ps
 ```
 
-La aceptación final requiere tests verdes, servicios `db` y `app` saludables, Swagger accesible y esta documentación alineada con las clases realmente fusionadas.
+Resultado en la rama integrada: suite completa en verde (90 tests, incluida la integración asíncrona `FlujoAsincronoIntegracionTest`), servicios `db` y `app` saludables, Swagger accesible en `/swagger-ui.html` y, en el perfil `dev`, la cartera de demostración sembrada por `CargadorDatosSemilla` visible en `GET /api/reportes/cartera`.
