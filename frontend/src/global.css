@@ -1,0 +1,22 @@
+/* Papel cálido de fondo: la app se lee como un legajo bancario, no como un SaaS. */
+body {
+  background-color: #f6f2ea;
+  background-image: radial-gradient(#e8e1d3 0.5px, transparent 0.5px);
+  background-size: 22px 22px;
+}
+
+/* Cifras monetarias: mono tabular para que las columnas se alineen al centavo. */
+.dinero {
+  font-family: "Spline Sans Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9em;
+}
+
+/* Pulso sutil para estados transitorios (Borrador / EnEvaluacion). */
+@keyframes latido {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.evaluando {
+  animation: latido 1.4s ease-in-out infinite;
+}

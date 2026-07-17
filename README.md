@@ -155,6 +155,10 @@ Swagger, OpenAPI y `/actuator/health` permanecen públicos. No coloque claves en
 
 Sin esos secrets la imagen se construye para validación, pero no se publica.
 
+## Frontend de demostración
+
+En [frontend/](frontend/README.md) hay una SPA mínima (Vite + React + Mantine) para demostrar los flujos: solicitudes con evaluación asíncrona visible en vivo, desembolsos, planes de amortización y el reporte de cartera. Con el backend arriba: `cd frontend && npm install && npm run dev` y abrir <http://localhost:5174>. Es secundaria; toda la lógica de negocio vive en la API.
+
 ## Arquitectura y patrones
 
 La justificación de SOLID, Strategy, Factory y Observer está en [docs/arquitectura.md](docs/arquitectura.md).
