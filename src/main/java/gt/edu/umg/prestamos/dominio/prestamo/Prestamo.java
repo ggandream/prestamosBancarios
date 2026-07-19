@@ -61,7 +61,7 @@ public abstract class Prestamo {
     }
 
     /** Estrategia de amortización por defecto del producto (Strategy hook polimórfico). */
-    protected abstract CalculadoraInteres calculadoraPorDefecto();
+    public abstract CalculadoraInteres calculadoraPorDefecto();
 
     /** Cuota representativa (la primera) según la estrategia por defecto del producto. */
     public BigDecimal calcularCuota() {

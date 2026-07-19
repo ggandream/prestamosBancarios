@@ -29,7 +29,7 @@ public final class PrestamoAutomotriz extends Prestamo {
     }
 
     @Override
-    protected CalculadoraInteres calculadoraPorDefecto() {
+    public CalculadoraInteres calculadoraPorDefecto() {
         return new MetodoAleman();
     }
 

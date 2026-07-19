@@ -1,9 +1,11 @@
 package gt.edu.umg.prestamos.persistencia.adaptador;
 
+import gt.edu.umg.prestamos.dominio.estado.EstadoPrestamo;
 import gt.edu.umg.prestamos.dominio.prestamo.Prestamo;
 import gt.edu.umg.prestamos.persistencia.entidad.ClienteEntity;
 import gt.edu.umg.prestamos.persistencia.entidad.PrestamoEntity;
 import gt.edu.umg.prestamos.persistencia.entidad.TipoEstado;
+import gt.edu.umg.prestamos.persistencia.mapper.EstadoMapper;
 import gt.edu.umg.prestamos.persistencia.mapper.PrestamoMapper;
 import gt.edu.umg.prestamos.persistencia.repositorio.ClienteJpaRepository;
 import gt.edu.umg.prestamos.persistencia.repositorio.PrestamoJpaRepository;
@@ -26,13 +28,16 @@ public class PrestamoRepositorioJpa {
     private final PrestamoJpaRepository repositorio;
     private final ClienteJpaRepository clienteRepositorio;
     private final PrestamoMapper mapper;
+    private final EstadoMapper estadoMapper;
 
     public PrestamoRepositorioJpa(PrestamoJpaRepository repositorio,
                                   ClienteJpaRepository clienteRepositorio,
-                                  PrestamoMapper mapper) {
+                                  PrestamoMapper mapper,
+                                  EstadoMapper estadoMapper) {
         this.repositorio = repositorio;
         this.clienteRepositorio = clienteRepositorio;
         this.mapper = mapper;
+        this.estadoMapper = estadoMapper;
     }
 
     @Transactional
@@ -63,5 +68,26 @@ public class PrestamoRepositorioJpa {
     @Transactional(readOnly = true)
     public List<Prestamo> buscarPorTipo(Class<? extends PrestamoEntity> tipo) {
         return repositorio.findByTipo(tipo).stream().map(mapper::aDominio).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Prestamo> buscarTodos() {
+        return repositorio.findAll().stream().map(mapper::aDominio).toList();
+    }
+
+    /**
+     * Actualiza únicamente el estado de un préstamo ya persistido, sin regenerar el
+     * plan de cuotas (regenerarlo con {@link #guardar(Prestamo)} chocaría con la
+     * restricción única {@code uk_cuota_prestamo_numero}).
+     *
+     * @throws IllegalArgumentException si el préstamo no existe
+     */
+    @Transactional
+    public Prestamo actualizarEstado(UUID id, EstadoPrestamo estado) {
+        PrestamoEntity entity = repositorio.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se puede actualizar el estado: el préstamo " + id + " no existe"));
+        entity.setEstado(estadoMapper.aEmbeddable(estado));
+        return mapper.aDominio(entity);
     }
 }

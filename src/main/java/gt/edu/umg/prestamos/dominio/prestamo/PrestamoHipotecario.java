@@ -41,7 +41,7 @@ public final class PrestamoHipotecario extends Prestamo {
     }
 
     @Override
-    protected CalculadoraInteres calculadoraPorDefecto() {
+    public CalculadoraInteres calculadoraPorDefecto() {
         return new MetodoFrances();
     }
 
